@@ -73,8 +73,14 @@ target_link_libraries(kitti_gps_test vins_lib)
 
 # Install launch files
 install(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch/
+)
+
+# Install config files (includes .rviz and YAML configs)
+install(
+  DIRECTORY ../config/
+  DESTINATION share/${PROJECT_NAME}/config/
 )
 
 # Install nodes
