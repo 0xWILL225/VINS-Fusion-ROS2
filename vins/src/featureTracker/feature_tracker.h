@@ -20,6 +20,7 @@
 #include <execinfo.h>
 #include <csignal>
 #include <opencv2/opencv.hpp>
+#include <opencv2/video/tracking.hpp>
 #include <eigen3/Eigen/Dense>
 
 #ifdef GPU_MODE

@@ -10,6 +10,7 @@
  *******************************************************/
 
 #include "initial_sfm.h"
+#include "../utility/thin_logger.h"
 
 GlobalSFM::GlobalSFM(){}
 
@@ -55,7 +56,7 @@ bool GlobalSFM::solveFrameByPnP(Matrix3d &R_initial, Vector3d &P_initial, int i,
 	}
 	if (int(pts_2_vector.size()) < 15)
 	{
-		printf("unstable features tracking, please slowly move you device!\n");
+		VINS_LOG_WARN_STREAM("unstable features tracking, please slowly move you device!");
 		if (int(pts_2_vector.size()) < 10)
 			return false;
 	}
@@ -242,7 +243,13 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 */
 	//full BA
 	ceres::Problem problem;
+#if CERES_VERSION_MAJOR > 2 || \
+    (CERES_VERSION_MAJOR == 2 && CERES_VERSION_MINOR >= 1)
 	ceres::Manifold* quaternion_manifold = new ceres::QuaternionManifold();
+#else
+	ceres::LocalParameterization* quaternion_manifold =
+	    new ceres::QuaternionParameterization();
+#endif
 	//cout << " begin full BA " << endl;
 	for (int i = 0; i < frame_num; i++)
 	{

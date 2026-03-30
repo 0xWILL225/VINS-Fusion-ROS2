@@ -8,6 +8,7 @@
  *******************************************************/
 
 #include "marginalization_factor.h"
+#include "../utility/thin_logger.h"
 
 void ResidualBlockInfo::Evaluate()
 {
@@ -210,7 +211,7 @@ void MarginalizationInfo::marginalize()
     if(m == 0)
     {
         valid = false;
-        printf("unstable tracking...\n");
+        VINS_LOG_WARN_STREAM("unstable tracking...");
         return;
     }
 

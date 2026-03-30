@@ -9,6 +9,7 @@
 
 #include "estimator.h"
 #include "../utility/visualization.h"
+#include "../utility/thin_logger.h"
 
 Estimator::Estimator(): f_manager{Rs}
 {
@@ -22,7 +23,7 @@ Estimator::~Estimator()
     if (MULTIPLE_THREAD)
     {
         processThread.join();
-        printf("join thread \n");
+        VINS_LOG_INFO_STREAM("join thread");
     }
 }
 
@@ -106,7 +107,9 @@ void Estimator::setParameter()
     {
         tic[i] = TIC[i];
         ric[i] = RIC[i];
-        cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
+        VINS_LOG_INFO_STREAM("exitrinsic cam " << i << '\n'
+                             << ric[i] << '\n'
+                             << tic[i].transpose());
     }
     f_manager.setRic(ric);
     ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
@@ -114,10 +117,10 @@ void Estimator::setParameter()
     ProjectionOneFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     td = TD;
     g = G;
-    cout << "set g " << g.transpose() << endl;
+    VINS_LOG_INFO_STREAM("set g " << g.transpose());
     featureTracker.readIntrinsicParameter(CAM_NAMES);
 
-    std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
+    VINS_LOG_INFO("MULTIPLE_THREAD is %d", MULTIPLE_THREAD);
     if (MULTIPLE_THREAD && !initThreadFlag)
     {
         initThreadFlag = true;
@@ -131,7 +134,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     bool restart = false;
     mProcess.lock();
     if(!use_imu && !use_stereo)
-        printf("at least use two sensors! \n");
+        VINS_LOG_WARN_STREAM("at least use two sensors!");
     else
     {
         if(USE_IMU != use_imu)
@@ -154,7 +157,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
         }
         
         STEREO = use_stereo;
-        printf("use imu %d use stereo %d\n", USE_IMU, STEREO);
+        VINS_LOG_INFO("use imu %d use stereo %d", USE_IMU, STEREO);
     }
     mProcess.unlock();
     if(restart)
@@ -198,7 +201,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         mBuf.unlock();
         TicToc processTime;
         processMeasurements();
-        printf("process time: %f\n", processTime.toc());
+        VINS_LOG_DEBUG("process time: %f", processTime.toc());
     }
     
 }
@@ -238,7 +241,7 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
 {
     if(accBuf.empty())
     {
-        printf("not receive imu\n");
+        VINS_LOG_WARN_STREAM("not receive imu");
         return false;
     }
     // printf("get imu from %f %f\n", t0, t1);
@@ -267,7 +270,7 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
     }
     else
     {
-        printf("wait for imu\n");
+        VINS_LOG_DEBUG_STREAM("wait for imu");
         return false;
     }
     return true;
@@ -301,7 +304,7 @@ void Estimator::processMeasurements()
                     break;
                 else
                 {
-                    printf("wait for imu ... \n");
+                    VINS_LOG_DEBUG_STREAM("wait for imu ...");
                     if (! MULTIPLE_THREAD)
                         return;
                     std::chrono::milliseconds dura(5);
@@ -387,7 +390,7 @@ void Estimator::processMeasurements()
 
 void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector)
 {
-    printf("init first imu pose\n");
+    VINS_LOG_INFO_STREAM("init first imu pose");
     initFirstPoseFlag = true;
     //return;
     Eigen::Vector3d averAcc(0, 0, 0);
@@ -397,12 +400,12 @@ void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVecto
         averAcc = averAcc + accVector[i].second;
     }
     averAcc = averAcc / n;
-    printf("averge acc %f %f %f\n", averAcc.x(), averAcc.y(), averAcc.z());
+    VINS_LOG_INFO("averge acc %f %f %f", averAcc.x(), averAcc.y(), averAcc.z());
     Matrix3d R0 = Utility::g2R(averAcc);
     double yaw = Utility::R2ypr(R0).x();
     R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
     Rs[0] = R0;
-    cout << "init R0 " << endl << Rs[0] << endl;
+    VINS_LOG_INFO_STREAM("init R0\n" << Rs[0]);
     //Vs[0] = Vector3d(5, 0, 0);
 }
 
@@ -455,7 +458,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 {
 
 
-    cout << std::fixed << header << endl;
+    VINS_LOG_DEBUG_STREAM(std::fixed << header);
 
     ROS_DEBUG("new image coming ------------------------------------------");
     ROS_DEBUG("Adding feature points %lu", image.size());
@@ -745,7 +748,7 @@ bool Estimator::initialStructure()
         cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);     
         if(pts_3_vector.size() < 6)
         {
-            cout << "pts_3_vector size " << pts_3_vector.size() << endl;
+            VINS_LOG_DEBUG_STREAM("pts_3_vector size " << pts_3_vector.size());
             ROS_DEBUG("Not enough points for solve pnp !");
             return false;
         }
@@ -1068,7 +1071,12 @@ void Estimator::optimization()
     //ceres::LossFunction* loss_function = new ceres::HuberLoss(1.0);
     for (int i = 0; i < frame_count + 1; i++)
     {
+#if CERES_VERSION_MAJOR > 2 || \
+    (CERES_VERSION_MAJOR == 2 && CERES_VERSION_MINOR >= 1)
         ceres::Manifold *local_parameterization = new PoseLocalParameterization();
+#else
+        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+#endif
         problem.AddParameterBlock(para_Pose[i], SIZE_POSE, local_parameterization);
         if(USE_IMU)
             problem.AddParameterBlock(para_SpeedBias[i], SIZE_SPEEDBIAS);
@@ -1078,7 +1086,12 @@ void Estimator::optimization()
 
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
+#if CERES_VERSION_MAJOR > 2 || \
+    (CERES_VERSION_MAJOR == 2 && CERES_VERSION_MINOR >= 1)
         ceres::Manifold *local_parameterization = new PoseLocalParameterization();
+#else
+        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+#endif
         problem.AddParameterBlock(para_Ex_Pose[i], SIZE_POSE, local_parameterization);
         if ((ESTIMATE_EXTRINSIC && frame_count == WINDOW_SIZE && Vs[0].norm() > 0.2) || openExEstimation)
         {
@@ -1167,11 +1180,8 @@ void Estimator::optimization()
     ceres::Solver::Options options;
 
     if (USE_GPU_CERES)
-        // std::cout << "1" << endl;
-        options.dense_linear_algebra_library_type = ceres::CUDA;
-    else
-        // std::cout << "2" << endl;
-        options.linear_solver_type = ceres::DENSE_SCHUR;
+        ROS_WARN("CUDA Ceres is unavailable in this build; falling back to DENSE_SCHUR");
+    options.linear_solver_type = ceres::DENSE_SCHUR;
 
     //options.num_threads = 2;
     options.trust_region_strategy_type = ceres::DOGLEG;

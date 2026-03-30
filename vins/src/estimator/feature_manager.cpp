@@ -8,6 +8,7 @@
  *******************************************************/
 
 #include "feature_manager.h"
+#include "../utility/thin_logger.h"
 
 int FeaturePerId::endFrame()
 {
@@ -225,7 +226,7 @@ bool FeatureManager::solvePoseByPnP(Eigen::Matrix3d &R, Eigen::Vector3d &P,
     //printf("pnp size %d \n",(int)pts2D.size() );
     if (int(pts2D.size()) < 4)
     {
-        printf("feature tracking not enough, please slowly move you device! \n");
+        VINS_LOG_WARN_STREAM("feature tracking not enough, please slowly move you device!");
         return false;
     }
     cv::Mat r, rvec, t, D, tmp_r;
@@ -239,7 +240,7 @@ bool FeatureManager::solvePoseByPnP(Eigen::Matrix3d &R, Eigen::Vector3d &P,
 
     if(!pnp_succ)
     {
-        printf("pnp failed ! \n");
+        VINS_LOG_WARN_STREAM("pnp failed!");
         return false;
     }
     cv::Rodrigues(rvec, r);

@@ -27,6 +27,7 @@ bool PoseLocalParameterization::Plus(const double *x, const double *delta, doubl
     return true;
 }
 
+#if VINSFUSION_USE_CERES_MANIFOLD
 bool PoseLocalParameterization::PlusJacobian(const double *x, double *jacobian) const
 {
     Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor>> j(jacobian);
@@ -35,7 +36,18 @@ bool PoseLocalParameterization::PlusJacobian(const double *x, double *jacobian) 
 
     return true;
 }
+#else
+bool PoseLocalParameterization::ComputeJacobian(const double *x, double *jacobian) const
+{
+    Eigen::Map<Eigen::Matrix<double, 7, 6, Eigen::RowMajor>> j(jacobian);
+    j.topRows<6>().setIdentity();
+    j.bottomRows<1>().setZero();
 
+    return true;
+}
+#endif
+
+#if VINSFUSION_USE_CERES_MANIFOLD
 bool PoseLocalParameterization::Minus(const double *y, const double *x, double *y_minus_x) const
 {
     Eigen::Map<const Eigen::Vector3d> p_y(y);
@@ -66,3 +78,4 @@ bool PoseLocalParameterization::MinusJacobian(const double *x, double *jacobian)
 
     return true;
 }
+#endif

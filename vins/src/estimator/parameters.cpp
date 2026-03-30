@@ -8,6 +8,7 @@
  *******************************************************/
 
 #include "parameters.h"
+#include "../utility/thin_logger.h"
 
 double INIT_DEPTH;
 double MIN_PARALLAX;
@@ -58,7 +59,7 @@ T readParam(rclcpp::Node::SharedPtr n, std::string name)
     if (n->get_parameter(name, ans))
     {
         ROS_INFO("Loaded %s: ", name);
-        std::cout << ans << std::endl;
+        VINS_LOG_INFO_STREAM(ans);
     }
     else
     {
@@ -81,7 +82,7 @@ void readParameters(std::string config_file)
     cv::FileStorage fsSettings(config_file, cv::FileStorage::READ);
     if(!fsSettings.isOpened())
     {
-        std::cerr << "ERROR: Wrong path to settings" << std::endl;
+        VINS_LOG_ERROR_STREAM("Wrong path to settings");
     }
 
     fsSettings["image0_topic"] >> IMAGE0_TOPIC;
@@ -99,11 +100,11 @@ void readParameters(std::string config_file)
     USE_GPU_CERES = fsSettings["use_gpu_ceres"];
 
     USE_IMU = fsSettings["imu"];
-    printf("USE_IMU: %d\n", USE_IMU);
+    VINS_LOG_INFO("USE_IMU: %d", USE_IMU);
     if(USE_IMU)
     {
         fsSettings["imu_topic"] >> IMU_TOPIC;
-        printf("IMU_TOPIC: %s\n", IMU_TOPIC.c_str());
+        VINS_LOG_INFO("IMU_TOPIC: %s", IMU_TOPIC.c_str());
         ACC_N = fsSettings["acc_n"];
         ACC_W = fsSettings["acc_w"];
         GYR_N = fsSettings["gyr_n"];
@@ -118,7 +119,7 @@ void readParameters(std::string config_file)
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
     VINS_RESULT_PATH = OUTPUT_FOLDER + "/vio.csv";
-    std::cout << "result path " << VINS_RESULT_PATH << std::endl;
+    VINS_LOG_INFO_STREAM("result path " << VINS_RESULT_PATH);
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
 
@@ -149,11 +150,11 @@ void readParameters(std::string config_file)
     } 
     
     NUM_OF_CAM = fsSettings["num_of_cam"];
-    printf("camera number %d\n", NUM_OF_CAM);
+    VINS_LOG_INFO("camera number %d", NUM_OF_CAM);
 
     if(NUM_OF_CAM != 1 && NUM_OF_CAM != 2)
     {
-        printf("num_of_cam should be 1 or 2\n");
+        VINS_LOG_ERROR_STREAM("num_of_cam should be 1 or 2");
         assert(0);
     }
 
@@ -202,7 +203,7 @@ void readParameters(std::string config_file)
     {
         ESTIMATE_EXTRINSIC = 0;
         ESTIMATE_TD = 0;
-        printf("no imu, fix extrinsic param; no time offset calibration\n");
+        VINS_LOG_INFO_STREAM("no imu, fix extrinsic param; no time offset calibration");
     }
 
     fsSettings.release();

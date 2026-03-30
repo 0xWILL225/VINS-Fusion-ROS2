@@ -10,6 +10,7 @@
  *******************************************************/
 
 #include "feature_tracker.h"
+#include "../utility/thin_logger.h"
 
 bool FeatureTracker::inBorder(const cv::Point2f &pt)
 {
@@ -283,12 +284,12 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             {
                 TicToc t_t;
                 if(mask.empty())
-                    cout << "mask is empty " << endl;
+                    VINS_LOG_WARN_STREAM("mask is empty");
                 if (mask.type() != CV_8UC1)
-                    cout << "mask type wrong " << endl;
+                    VINS_LOG_WARN_STREAM("mask type wrong");
                 cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01, MIN_DIST, mask);
                 // printf("good feature to track costs: %fms\n", t_t.toc());
-                std::cout << "n_pts size: "<< n_pts.size()<<std::endl;
+                VINS_LOG_DEBUG("n_pts size: %zu", n_pts.size());
             }
             else
                 n_pts.clear();
@@ -303,9 +304,9 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             if (n_max_cnt > 0)
             {
                 if(mask.empty())
-                    cout << "mask is empty " << endl;
+                    VINS_LOG_WARN_STREAM("mask is empty");
                 if (mask.type() != CV_8UC1)
-                    cout << "mask type wrong " << endl;
+                    VINS_LOG_WARN_STREAM("mask type wrong");
                 TicToc t_g;
                 cv::cuda::GpuMat cur_gpu_img(cur_img);
                 cv::cuda::GpuMat d_prevPts;

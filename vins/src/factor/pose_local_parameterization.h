@@ -11,15 +11,34 @@
 
 #include <eigen3/Eigen/Dense>
 #include <ceres/ceres.h>
+
 #include "../utility/utility.h"
 
+#if CERES_VERSION_MAJOR > 2 || \
+    (CERES_VERSION_MAJOR == 2 && CERES_VERSION_MINOR >= 1)
+#define VINSFUSION_USE_CERES_MANIFOLD 1
+#else
+#define VINSFUSION_USE_CERES_MANIFOLD 0
+#endif
+
+#if VINSFUSION_USE_CERES_MANIFOLD
 class PoseLocalParameterization : public ceres::Manifold
+#else
+class PoseLocalParameterization : public ceres::LocalParameterization
+#endif
 {
 public:
+#if VINSFUSION_USE_CERES_MANIFOLD
     bool Plus(const double *x, const double *delta, double *x_plus_delta) const override;
     bool PlusJacobian(const double *x, double *jacobian) const override;
     bool Minus(const double *y, const double *x, double *y_minus_x) const override;
     bool MinusJacobian(const double *x, double *jacobian) const override;
     int AmbientSize() const override { return 7; }
     int TangentSize() const override { return 6; }
+#else
+    bool Plus(const double *x, const double *delta, double *x_plus_delta) const override;
+    bool ComputeJacobian(const double *x, double *jacobian) const override;
+    int GlobalSize() const override { return 7; }
+    int LocalSize() const override { return 6; }
+#endif
 };
